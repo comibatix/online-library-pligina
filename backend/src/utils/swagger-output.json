@@ -1,0 +1,745 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Online Library API",
+    "description": "Документация API для приложения Онлайн-библиотека",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Локальный сервер разработки"
+    }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Аутентификация" },
+    { "name": "Profile", "description": "Профиль пользователя" },
+    { "name": "Books", "description": "Книги" },
+    { "name": "Likes", "description": "Лайки" },
+    { "name": "Comments", "description": "Комментарии" },
+    { "name": "ReadingList", "description": "Список чтения" },
+    { "name": "MyBooks", "description": "Поиск по моим книгам" }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Регистрация нового пользователя",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login": { "type": "string", "example": "user123" },
+                  "password": { "type": "string", "example": "password123" }
+                },
+                "required": ["login", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Пользователь зарегистрирован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "token": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Ошибка валидации" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Вход пользователя (получение JWT токена)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login": { "type": "string", "example": "user123" },
+                  "password": { "type": "string", "example": "password123" }
+                },
+                "required": ["login", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT токен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Неверный логин или пароль" }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Получить профиль текущего пользователя",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Профиль пользователя",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userId": { "type": "string" },
+                    "login": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Не авторизован" }
+        }
+      }
+    },
+    "/api/profile/login": {
+      "put": {
+        "tags": ["Profile"],
+        "summary": "Обновить логин пользователя",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "newLogin": { "type": "string", "example": "newuser123" },
+                  "currentPassword": { "type": "string", "example": "password123" }
+                },
+                "required": ["newLogin", "currentPassword"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Логин обновлён" },
+          "400": { "description": "Логин уже занят" },
+          "401": { "description": "Неверный пароль" }
+        }
+      }
+    },
+    "/api/profile/password": {
+      "put": {
+        "tags": ["Profile"],
+        "summary": "Обновить пароль пользователя",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": { "type": "string", "example": "password123" },
+                  "newPassword": { "type": "string", "example": "newpassword123" }
+                },
+                "required": ["currentPassword", "newPassword"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Пароль обновлён" },
+          "401": { "description": "Неверный текущий пароль" }
+        }
+      }
+    },
+    "/api/users/{userId}": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Получить данные пользователя по ID (для отображения в комментариях)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "user-uuid-here"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Данные пользователя",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userId": { "type": "string" },
+                    "login": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Пользователь не найден" }
+        }
+      }
+    },
+    "/api/books/search": {
+      "get": {
+        "tags": ["Books"],
+        "summary": "Поиск книг по запросу",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "Harry Potter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список книг",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "books": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "olid": { "type": "string" },
+                          "title": { "type": "string" },
+                          "author_name": { "type": "array", "items": { "type": "string" } },
+                          "first_publish_year": { "type": "integer" },
+                          "cover_url": { "type": "string" }
+                        }
+                      }
+                    },
+                    "numFound": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/books/{olid}": {
+      "get": {
+        "tags": ["Books"],
+        "summary": "Получение детальной информации о книге",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "olid",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "OL82560W"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Детали книги",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "olid": { "type": "string" },
+                    "title": { "type": "string" },
+                    "author_name": { "type": "array", "items": { "type": "string" } },
+                    "description": { "type": "string" },
+                    "first_publish_year": { "type": "integer" },
+                    "cover_url": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Книга не найдена" }
+        }
+      }
+    },
+    "/api/books/{bookOlid}/likes": {
+      "get": {
+        "tags": ["Books"],
+        "summary": "Получить количество лайков книги",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookOlid",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "OL82560W"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Количество лайков",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/books/{bookOlid}/comments": {
+      "get": {
+        "tags": ["Books"],
+        "summary": "Получить комментарии к книге",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookOlid",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "OL82560W"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список комментариев",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "comments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "text": { "type": "string" },
+                          "user_login": { "type": "string" },
+                          "created_at": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/likes": {
+      "get": {
+        "tags": ["Likes"],
+        "summary": "Получить список лайкнутых книг пользователя",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Список лайков",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "likes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "book_olid": { "type": "string" },
+                          "created_at": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Likes"],
+        "summary": "Поставить лайк книге",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookOlid": { "type": "string", "example": "OL82560W" }
+                },
+                "required": ["bookOlid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Лайк добавлен" },
+          "400": { "description": "Уже стоит лайк" }
+        }
+      }
+    },
+    "/api/likes/search": {
+      "get": {
+        "tags": ["Likes"],
+        "summary": "Поиск по лайкнутым книгам",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "Harry"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Отфильтрованный список лайков",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "books": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "olid": { "type": "string" },
+                          "title": { "type": "string" },
+                          "author_name": { "type": "array", "items": { "type": "string" } }
+                        }
+                      }
+                    },
+                    "numFound": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/likes/{bookOlid}": {
+      "delete": {
+        "tags": ["Likes"],
+        "summary": "Убрать лайк с книги",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookOlid",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "OL82560W"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Лайк удалён" }
+        }
+      }
+    },
+    "/api/comments": {
+      "get": {
+        "tags": ["Comments"],
+        "summary": "Получить все комментарии текущего пользователя",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Список комментариев",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "comments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "book_olid": { "type": "string" },
+                          "text": { "type": "string" },
+                          "created_at": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Comments"],
+        "summary": "Создать комментарий к книге",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookOlid": { "type": "string", "example": "OL82560W" },
+                  "text": { "type": "string", "example": "Отличная книга!" }
+                },
+                "required": ["bookOlid", "text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Комментарий добавлен" }
+        }
+      }
+    },
+    "/api/comments/{commentId}": {
+      "put": {
+        "tags": ["Comments"],
+        "summary": "Редактировать свой комментарий",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "commentId",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": { "type": "string", "example": "Обновлённый текст комментария" }
+                },
+                "required": ["text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Комментарий обновлён" },
+          "403": { "description": "Можно редактировать только свои комментарии" }
+        }
+      },
+      "delete": {
+        "tags": ["Comments"],
+        "summary": "Удалить свой комментарий",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "commentId",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Комментарий удалён" },
+          "403": { "description": "Можно удалять только свои комментарии" }
+        }
+      }
+    },
+    "/api/reading-list": {
+      "get": {
+        "tags": ["ReadingList"],
+        "summary": "Получить список чтения пользователя",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Список чтения",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "readingList": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "book_olid": { "type": "string" },
+                          "status": { "type": "string", "enum": ["want_to_read", "reading", "read"] },
+                          "created_at": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["ReadingList"],
+        "summary": "Добавить книгу в список чтения",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookOlid": { "type": "string", "example": "OL82560W" },
+                  "status": { "type": "string", "enum": ["want_to_read", "reading", "read"], "example": "want_to_read" }
+                },
+                "required": ["bookOlid", "status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Книга добавлена в список чтения" }
+        }
+      }
+    },
+    "/api/reading-list/{bookOlid}": {
+      "put": {
+        "tags": ["ReadingList"],
+        "summary": "Обновить статус книги в списке чтения",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookOlid",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "OL82560W"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["want_to_read", "reading", "read"], "example": "reading" }
+                },
+                "required": ["status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Статус обновлён" }
+        }
+      },
+      "delete": {
+        "tags": ["ReadingList"],
+        "summary": "Удалить книгу из списка чтения",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookOlid",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "OL82560W"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Книга удалена из списка чтения" }
+        }
+      }
+    },
+    "/api/my-books/search": {
+      "get": {
+        "tags": ["MyBooks"],
+        "summary": "Поиск по своим книгам (лайки + список чтения)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "Harry"
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": { "type": "string", "enum": ["all", "likes", "reading"] },
+            "example": "all"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Отфильтрованный список книг",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "books": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "olid": { "type": "string" },
+                          "title": { "type": "string" },
+                          "author_name": { "type": "array", "items": { "type": "string" } },
+                          "category": { "type": "string" }
+                        }
+                      }
+                    },
+                    "numFound": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT токен в формате: Bearer <token>"
+      }
+    }
+  }
+}
